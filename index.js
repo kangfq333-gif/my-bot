@@ -51,17 +51,19 @@ client.on('messageCreate', async (message) => {
     const embed = new EmbedBuilder()
       .setTitle("🛠️ لوحة التحكم")
       .setDescription(`
-🎫 التذاكر: \`!ticketpanel\`
-📜 تعيين اللوق: \`!setlog\`
+🎫 التذاكر: \`!ticketpanel\`  
+📜 تعيين اللوق: \`!setlog\`  
 ✏️ تغيير رسالة التذكرة: \`!ticketmsg <text>\`
       `)
-      .setColor('Blue');
+      .setColor("Blue");
 
     message.channel.send({ embeds: [embed] });
   }
 
   // ================== تعيين لوق ==================
   if (args[0] === '!setlog') {
+    if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return;
+
     config.logChannel = message.channel.id;
     message.reply('📜 تم تعيين اللوق هنا');
   }
@@ -74,7 +76,7 @@ client.on('messageCreate', async (message) => {
     message.reply('🎫 تم تغيير رسالة التذكرة');
   }
 
-  // ================== إرسال لوحة التذاكر ==================
+  // ================== لوحة التذاكر ==================
   if (args[0] === '!ticketpanel') {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -133,4 +135,5 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// ================== تشغيل البوت ==================
 client.login(process.env.DISCORD_TOKEN);
