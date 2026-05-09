@@ -1,83 +1,78 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildBans
-  ],
-  partials: [Partials.Channel]
+    GatewayIntentBits.GuildBans,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
 });
 
-// إعدادات السيرفر
-const settings = new Map();
+const actions = new Map();
+
+function addAction(userId) {
+  const now = Date.now();
+  const data = actions.get(userId) || { count: 0, time: now };
+
+  if (now - data.time > 10000) {
+    data.count = 0;
+    data.time = now;
+  }
+
+  data.count += 1;
+  actions.set(userId, data);
+
+  return data.count;
+}
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-// أول دخول سيرفر
-client.on('guildCreate', (guild) => {
-  settings.set(guild.id, {
-    antiBan: true,
-    logChannel: null
-  });
-});
-
-// أوامر بسيطة
-client.on('messageCreate', (message) => {
-  if (!message.guild || message.author.bot) return;
-
-  if (!settings.has(message.guild.id)) {
-    settings.set(message.guild.id, {
-      antiBan: true,
-      logChannel: null
-    });
-  }
-
-  const args = message.content.split(' ');
-  const config = settings.get(message.guild.id);
-
-  // أمر تفعيل/تعطيل الحماية
-  if (args[0] === '!antiban') {
-    if (!message.member.permissions.has('Administrator')) return;
-
-    if (args[1] === 'on') {
-      config.antiBan = true;
-      message.reply('🛡️ AntiBan Enabled');
-    }
-
-    if (args[1] === 'off') {
-      config.antiBan = false;
-      message.reply('🛡️ AntiBan Disabled');
-    }
-  }
-
-  // تعيين لوق
-  if (args[0] === '!setlog') {
-    if (!message.member.permissions.has('Administrator')) return;
-
-    config.logChannel = message.channel.id;
-    message.reply('📜 Log channel set');
-  }
-});
-
-// حماية باند
+// Anti Ban
 client.on('guildBanAdd', async (ban) => {
-  const guildConfig = settings.get(ban.guild.id);
-  if (!guildConfig?.antiBan) return;
-
-  const audit = await ban.guild.fetchAuditLogs({ type: 22 });
-  const executor = audit.entries.first()?.executor;
+  const logs = await ban.guild.fetchAuditLogs({ type: 22 });
+  const executor = logs.entries.first()?.executor;
 
   if (!executor) return;
 
-  const member = await ban.guild.members.fetch(executor.id).catch(() => null);
+  const count = addAction(executor.id);
 
-  if (member) {
-    await member.kick("Anti-Ban Protection");
+  if (count >= 3) {
+    const member = await ban.guild.members.fetch(executor.id).catch(() => null);
+    if (member) await member.kick("Anti-Nuke: Mass Ban");
+  }
+});
+
+// Anti Channel Delete
+client.on('channelDelete', async (channel) => {
+  const logs = await channel.guild.fetchAuditLogs({ type: 12 });
+  const executor = logs.entries.first()?.executor;
+
+  if (!executor) return;
+
+  const count = addAction(executor.id);
+
+  if (count >= 3) {
+    const member = await channel.guild.members.fetch(executor.id).catch(() => null);
+    if (member) await member.kick("Anti-Nuke: Channel Delete");
+  }
+});
+
+// Anti Role Delete
+client.on('roleDelete', async (role) => {
+  const logs = await role.guild.fetchAuditLogs({ type: 32 });
+  const executor = logs.entries.first()?.executor;
+
+  if (!executor) return;
+
+  const count = addAction(executor.id);
+
+  if (count >= 3) {
+    const member = await role.guild.members.fetch(executor.id).catch(() => null);
+    if (member) await member.kick("Anti-Nuke: Role Delete");
   }
 });
 
