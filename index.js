@@ -1,8 +1,4 @@
-const {
-  Client,
-  GatewayIntentBits,
-  EmbedBuilder
-} = require('discord.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -16,20 +12,14 @@ client.once('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-client.on('messageCreate', async (message) => {
+client.on('messageCreate', (message) => {
 
   console.log("MSG:", message.content);
 
-  if (!message.guild || message.author.bot) return;
+  if (message.author.bot) return;
 
   if (message.content === '!panel') {
-
-    const embed = new EmbedBuilder()
-      .setTitle('🛠️ لوحة التحكم')
-      .setDescription('البوت شغال 100%')
-      .setColor('Blue');
-
-    message.channel.send({ embeds: [embed] });
+    message.reply('✅ البوت شغال');
   }
 
 });
